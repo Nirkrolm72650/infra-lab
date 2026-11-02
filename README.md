@@ -1,7 +1,7 @@
 # Infra-Lab · Projet NovaTech
 
 **Auteurs :** Brandon | Amine | Rayan  
-**Formation :** Cybersécurité · Niveau Master (Infrastructures Avancées 1)  
+**Formation :** MCS · Infrastructures Avancées 1
 **Contexte :** Conception, déploiement et gouvernance de l'infrastructure souveraine multi-sites de NovaTech (100 % open source).
 
 ## Structure du Dépôt (`infra-lab`)
