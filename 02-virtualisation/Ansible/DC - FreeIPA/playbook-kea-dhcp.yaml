@@ -1,0 +1,90 @@
+---
+- name: Configuration de KEA DHCP et intégration FreeIPA pour Novatech
+  hosts: dhcp_servers
+  become: true
+  vars:
+    domain_name: "novatech.local"
+    dns_server: "10.0.20.10" # IP du serveur FreeIPA
+    gateway_ip: "10.0.50.254"
+    subnet_range: "10.0.50.0/24"
+    pool_start: "10.0.50.50"
+    pool_end: "10.0.50.200"
+
+  tasks:
+    - name: 1. Installer le serveur KEA DHCP sur Debian / Ubuntu
+      apt:
+        name: kea-dhcp4-server
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: 2. Installer le serveur KEA DHCP sur Rocky Linux / RHEL
+      dnf:
+        name: kea
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: 3. Déployer le fichier de configuration KEA DHCP (similaire à un étendu Windows AD)
+      copy:
+        dest: /etc/kea/kea-dhcp4.conf
+        content: |
+          {
+          "Dhcp4": {
+            "interfaces-config": {
+              "interfaces": ["ens18"]
+            },
+            "valid-lifetime": 43200,
+            "renew-timer": 21600,
+            "rebind-timer": 37800,
+            
+            "subnet4": [
+              {
+                "subnet": "{{ subnet_range }}",
+                "pools": [
+                  {
+                    "pool": "{{ pool_start }} - {{ pool_end }}"
+                  }
+                ],
+                "option-data": [
+                  {
+                    "name": "routers",
+                    "data": "{{ gateway_ip }}"
+                  },
+                  {
+                    "name": "domain-name-servers",
+                    "data": "{{ dns_server }}"
+                  },
+                  {
+                    "name": "domain-name",
+                    "data": "{{ domain_name }}"
+                  }
+                ]
+              }
+            ],
+            
+            "loggers": [
+              {
+                "name": "kea-dhcp4",
+                "output_options": [
+                  {
+                    "output": "/var/log/kea-dhcp4.log"
+                  }
+                ],
+                "severity": "INFO"
+              }
+            ]
+          }
+          }
+      notify: Redémarrer KEA DHCP
+
+    - name: 4. Activer et démarrer le service KEA DHCP
+      systemd:
+        name: kea-dhcp4-server
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Redémarrer KEA DHCP
+      systemd:
+        name: kea-dhcp4-server
+        state: restarted

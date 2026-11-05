@@ -1,0 +1,64 @@
+---
+- name: Automatisation de l'enrôlement FreeIPA et configuration des clients Linux
+  hosts: ipa_clients
+  become: true
+  vars:
+    ipa_server: "ipa01.novatech.local"
+    ipa_domain: "novatech.local"
+    ipa_realm: "NOVATECH.LOCAL"
+    # CONSEIL : Utilisez ansible-vault pour chiffrer ce mot de passe en production
+    ipa_admin_user: "admin"
+    ipa_admin_password: "VotreMotDePasseAdmin"
+
+  tasks:
+    - name: 1. S'assurer que le nom d'hôte complet est correctement défini
+      hostname:
+        name: "{{ inventory_hostname }}.{{ ipa_domain }}"
+
+    - name: 2. Ajouter la résolution statique du serveur FreeIPA dans /etc/hosts (si pas de DNS interne)
+      lineinfile:
+        path: /etc/hosts
+        line: "10.0.20.10 ipa01.novatech.local ipa01"
+        state: present
+
+    - name: 3. Installer le client FreeIPA sur Debian / Ubuntu
+      apt:
+        name: freeipa-client
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: 4. Installer le client FreeIPA sur RedHat / Rocky Linux / Fedora
+      dnf:
+        name: freeipa-client
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: 5. Lancer l'enrôlement automatique du client dans le domaine
+      command: >
+        ipa-client-install
+        --server={{ ipa_server }}
+        --domain={{ ipa_domain }}
+        --realm={{ ipa_realm }}
+        -p {{ ipa_admin_user }}
+        -w {{ ipa_admin_password }}
+        --unattended
+        --force-join
+      register: ipa_install
+      changed_when: "'Client configuration complete' in ipa_install.stdout"
+
+    - name: 6. Activer et démarrer le service oddjobd pour la création automatique des répertoires
+      systemd:
+        name: oddjobd
+        state: started
+        enabled: yes
+
+    - name: 7. Activer la création automatique du home via PAM sur Debian / Ubuntu
+      command: pam-auth-update --enable mkhomedir
+      when: ansible_os_family == "Debian"
+
+    - name: 8. Redémarrer SSSD pour appliquer l'ensemble de la configuration
+      systemd:
+        name: sssd
+        state: restarted
+        enabled: yes
