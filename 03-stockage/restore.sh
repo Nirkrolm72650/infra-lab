@@ -12,6 +12,7 @@ mkdir -p "$RESTORE_DIR"
 echo "==> Téléchargement du dernier snapshot depuis le dépôt Restic distant..."
 restic -r "$REPO" restore latest --target "$RESTORE_DIR"
 
+# Recherche automatique du dossier ipa-full extrait
 LATEST_RESTORED_BACKUP=$(find "$RESTORE_DIR" -name "ipa-full-*" -type d | head -n 1)
 
 if [ -d "$LATEST_RESTORED_BACKUP" ]; then
