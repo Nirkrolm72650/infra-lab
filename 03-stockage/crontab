@@ -1,0 +1,1 @@
+0 2 * * * /usr/local/bin/backup-ipa-restic.sh > var/log/ipa-restic.log 2>&1
