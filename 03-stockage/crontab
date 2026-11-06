@@ -1,1 +1,2 @@
+Permet de déclancher une sauvegarde tous les jours à 2 heure du matin. Les messages normaux et les erreurs sont redirigés vers un fichier de logs (Messages et erreurs dans le même fichiers de logs)
 0 2 * * * /usr/local/bin/backup-ipa-restic.sh > /var/log/ipa-restic.log 2>&1
